@@ -30,17 +30,20 @@ namespace {
        i += blockDim.x * gridDim.x)
 
 template <typename dtype>
-__global__ void ResizeNearestNeighborNCHW(const int nthreads, const dtype* bottom_data,
+__global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* bottom_data,
                                           const int channels, const int in_height,
                                           const int in_width, const int out_height,
                                           const int out_width, dtype* top_data) {
   const float width_scale = in_width / static_cast<float>(out_width);
   const float height_scale = in_height / static_cast<float>(out_height);
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
-    int out_x = index % out_width;
-    int out_y = (index / out_width) % out_height;
-    int c = (index / out_width / out_height) % channels;
-    int n = index / out_width / out_height / channels;
+    int n = index;
+    int c = n % channels;
+    n /= channels;
+    int out_x = n % out_width;
+    n /= out_width;
+    int out_y = n % out_height;
+    n /= out_height;
 
     const dtype* bottom_data_n = bottom_data + n * channels * in_height * in_width;
     const int in_x = min(static_cast<int>(floorf(out_x * width_scale)), in_width - 1);
@@ -51,24 +54,32 @@ __global__ void ResizeNearestNeighborNCHW(const int nthreads, const dtype* botto
 }
 
 template <typename dtype>
+__global__ void SetZero(const int nthreads, dtype* bottom_diff) {
+  CUDA_1D_KERNEL_LOOP(index, nthreads) { *(bottom_diff + index) = dtype(0); }
+}
+
+template <typename dtype>
 __global__ void ResizeNearestNeighborBackwardNHWC(
-                                   const int nthreads, const dtype* bottom_data,
+                                   const int nthreads, const dtype* top_diff,
                                    const int channels, const int in_height,
                                    const int in_width, const int out_height,
-                                   const int out_width, dtype* top_data) {
-  const float width_scale = in_width / static_cast<float>(out_width);
-  const float height_scale = in_height / static_cast<float>(out_height);
+                                   const int out_width, dtype* bottom_diff) {
+  const float width_scale = out_width / static_cast<float>(in_width);
+  const float height_scale = out_height / static_cast<float>(in_height);
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
-    int out_x = index % out_width;
-    int out_y = (index / out_width) % out_height;
-    int c = (index / out_width / out_height) % channels;
-    int n = index / out_width / out_height / channels;
+    int n = index;
+    int c = n % channels;
+    n /= channels;
+    int in_x = n % in_width;
+    n /= in_width;
+    int in_y = n % in_height;
+    n /= in_height;
 
-    const dtype* bottom_data_n = bottom_data + n * channels * in_height * in_width;
-    const int in_x = min(static_cast<int>(floorf(out_x * width_scale)), in_width - 1);
-    const int in_y = min(static_cast<int>(floorf(out_y * height_scale)), in_height - 1);
-    int idx = c * in_height * in_width + in_y * in_width + in_x;
-    top_data[index] = bottom_data_n[idx];
+    const dtype* top_diff_n = top_diff + n * channels * out_height * out_width;
+    const int out_x = min(static_cast<int>(floorf(in_x * width_scale)), out_width - 1);
+    const int out_y = min(static_cast<int>(floorf(in_y * height_scale)), out_height - 1);
+    int idx = c * out_height * out_width + out_y * out_width + out_x;
+    bottom_diff[index] += top_diff_n[idx];
   }
 }
 
@@ -83,12 +94,32 @@ bool ResizeNearestNeighbor(const float* bottom_data, const int batch,
   const int kThreadsPerBlock = 1024;
   const int output_size = batch * channels * out_height * out_width;
 
-  ResizeNearestNeighborNCHW<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock,
+  ResizeNearestNeighborNHWC<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock,
                        kThreadsPerBlock, 0, d.stream()>>>(
       output_size, bottom_data, in_height, in_width, channels, out_height,
       out_width, top_data);
   return d.ok();
 }
+
+bool ResizeNearestNeighborBackward(const float* top_diff, const int batch,
+                                   const int in_height, const int in_width,
+                                   const int channels, const int out_height,
+                                   const int out_width, float* bottom_diff,
+                                   const Eigen::GpuDevice& d) {
+  const int kThreadsPerBlock = 1024;
+  const int input_size = batch * channels * in_height * in_width;
+  const int output_size = batch * channels * out_height * out_width;
+
+  SetZero<<<(input_size + kThreadsPerBlock - 1) / kThreadsPerBlock,
+            kThreadsPerBlock, 0, d.stream()>>>(input_size, bottom_diff);
+
+  ResizeNearestNeighborBackwardNHWC<<<(input_size + kThreadsPerBlock - 1) / kThreadsPerBlock,
+                       kThreadsPerBlock, 0, d.stream()>>>(
+      output_size, top_diff, in_height, in_width, channels, out_height,
+      out_width, bottom_diff);
+  return d.ok();
+}
+
 
 }  // end namespace tensorflow
 
