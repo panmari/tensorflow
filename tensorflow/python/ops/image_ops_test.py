@@ -564,6 +564,12 @@ class ResizeImagesTest(test_util.TensorFlowTestCase):
              image_ops.ResizeMethod.BICUBIC,
              image_ops.ResizeMethod.AREA]
 
+  def availablGPUModes(self, opt):
+    if opt == image_ops.ResizeMethod.NEAREST_NEIGHBOR:
+      return [True, False]
+    else:
+      return [False]
+
   def testNoOp(self):
     img_shape = [1, 6, 4, 1]
     single_shape = [6, 4, 1]
