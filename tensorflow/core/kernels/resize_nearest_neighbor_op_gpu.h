@@ -28,10 +28,13 @@ limitations under the License.
 
 namespace tensorflow {
 
-    bool ResizeNearestNeighbor(
-            const float* bottom_data, const int batch, const int in_height,
-            const int in_width, const int channels, const int out_height,
-            const int out_width, float* top_data, const Eigen::GpuDevice& d);
+bool ResizeNearestNeighbor(const float* bottom_data, const int batch, const int in_height,
+                           const int in_width, const int channels, const int out_height,
+                           const int out_width, float* top_data, const Eigen::GpuDevice& d);
+
+bool ResizeNearestNeighborBackward(const float* bottom_data, const int batch, const int in_height,
+                                   const int in_width, const int channels, const int out_height,
+                                   const int out_width, float* top_data, const Eigen::GpuDevice& d);
 
 }  // namespace tensorflow
 

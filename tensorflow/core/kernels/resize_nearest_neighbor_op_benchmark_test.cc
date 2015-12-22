@@ -24,15 +24,18 @@ namespace tensorflow {
 
 static Graph* BM_ResizeNearestNeighbor(int batches, int width, int height) {
   Graph* g = new Graph(OpRegistry::Global());
-  Tensor in(DT_UINT8, TensorShape({batches, width, height, 3}));
-  in.flat<uint8>().setRandom();
+  Tensor in(DT_FLOAT, TensorShape({batches, width, height, 3}));
+  in.flat<float>().setRandom();
 
-  //AddInputFromArray<int32>(TensorShape({2}), {width * 2, height * 2});
+  Tensor out_size(DT_INT32, TensorShape({2}));
+  auto out_size_flat = out_size.flat<int32>();
+  out_size_flat(0) = width * 2;
+  out_size_flat(1) = height * 2;
 
   Node* ret;
   NodeBuilder(g->NewName("n"), "ResizeNearestNeighbor")
       .Input(test::graph::Constant(g, in))
-  //    .Input({width * 2, height * 2})
+      .Input(test::graph::Constant(g, out_size))
       .Finalize(g, &ret);
   return g;
 }
