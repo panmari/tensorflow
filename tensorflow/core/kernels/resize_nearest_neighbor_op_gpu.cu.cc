@@ -119,8 +119,6 @@ bool ResizeNearestNeighborBackward(const float* top_diff, const int batch,
       out_width, bottom_diff);
   return d.ok();
 }
-
-
 }  // end namespace tensorflow
 
 #endif  // GOOGLE_CUDA
