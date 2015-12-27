@@ -22,12 +22,10 @@ limitations under the License.
 
 #include "tensorflow/core/framework/register_types.h"
 #include "tensorflow/core/framework/tensor_types.h"
+#include "tensorflow/core/util/cuda_kernel_helper.h"
 
 namespace tensorflow {
 namespace {
-#define CUDA_1D_KERNEL_LOOP(i, n)                              \
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
-       i += blockDim.x * gridDim.x)
 
 template <typename dtype>
 __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* bottom_data,
@@ -53,7 +51,6 @@ __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* botto
   }
 }
 
-#undef CUDA_1D_KERNEL_LOOP
 }  // namespace
 
 bool ResizeNearestNeighbor(const float* bottom_data, const int batch,
@@ -61,11 +58,10 @@ bool ResizeNearestNeighbor(const float* bottom_data, const int batch,
                            const int channels, const int out_height,
                            const int out_width, float* top_data,
                            const Eigen::GpuDevice& d) {
-  const int kThreadsPerBlock = 1024;
   const int output_size = batch * channels * out_height * out_width;
+  CudaLaunchConfig config = GetCudaLaunchConfig(output_size, d);
 
-  ResizeNearestNeighborNHWC<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock,
-                       kThreadsPerBlock, 0, d.stream()>>>(
+  ResizeNearestNeighborNHWC<<<config.block_count, config.thread_per_block, 0, d.stream()>>>(
       output_size, bottom_data, in_height, in_width, channels, out_height,
       out_width, top_data);
   return d.ok();
