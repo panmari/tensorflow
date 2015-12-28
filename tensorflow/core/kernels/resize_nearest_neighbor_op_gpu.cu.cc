@@ -52,11 +52,6 @@ __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* botto
 }
 
 template <typename dtype>
-__global__ void SetZero(const int nthreads, dtype* bottom_diff) {
-  CUDA_1D_KERNEL_LOOP(index, nthreads) { *(bottom_diff + index) = dtype(0); }
-}
-
-template <typename dtype>
 __global__ void ResizeNearestNeighborBackwardNHWC(
                                    const int nthreads, const dtype* top_diff,
                                    const int channels, const int in_height,
@@ -93,7 +88,7 @@ bool ResizeNearestNeighbor(const float* bottom_data, const int batch,
   CudaLaunchConfig config = GetCudaLaunchConfig(output_size, d);
 
   ResizeNearestNeighborNHWC<<<config.block_count, config.thread_per_block, 0, d.stream()>>>(
-      output_size, bottom_data, in_height, in_width, channels, out_height,
+      config.virtual_thread_count, bottom_data, in_height, in_width, channels, out_height,
       out_width, top_data);
   return d.ok();
 }
@@ -103,16 +98,13 @@ bool ResizeNearestNeighborBackward(const float* top_diff, const int batch,
                                    const int channels, const int out_height,
                                    const int out_width, float* bottom_diff,
                                    const Eigen::GpuDevice& d) {
-  const int kThreadsPerBlock = 1024;
   const int input_size = batch * channels * in_height * in_width;
-  const int output_size = batch * channels * out_height * out_width;
+  CudaLaunchConfig config = GetCudaLaunchConfig(input_size, d);
 
-  SetZero<<<(input_size + kThreadsPerBlock - 1) / kThreadsPerBlock,
-            kThreadsPerBlock, 0, d.stream()>>>(input_size, bottom_diff);
+  SetZero<<<config.block_count, config.thread_per_block, 0, d.stream()>>>(input_size, bottom_diff);
 
-  ResizeNearestNeighborBackwardNHWC<<<(input_size + kThreadsPerBlock - 1) / kThreadsPerBlock,
-                       kThreadsPerBlock, 0, d.stream()>>>(
-      output_size, top_diff, in_height, in_width, channels, out_height,
+  ResizeNearestNeighborBackwardNHWC<<<config.block_count, config.thread_per_block, 0, d.stream()>>>(
+      config.virtual_thread_count, top_diff, in_height, in_width, channels, out_height,
       out_width, bottom_diff);
   return d.ok();
 }
