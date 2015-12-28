@@ -36,14 +36,15 @@ class ResizeNearestNeighborOpTest(tf.test.TestCase):
 
     x = np.arange(0, 4).reshape(in_shape).astype(np.float32)
 
-    with self.test_session() as sess:
-      input_tensor = tf.constant(x, shape=in_shape)
-      resize_out = tf.image.resize_nearest_neighbor(input_tensor,
-                                                    out_shape[1:3])
-      self.assertEqual(out_shape, list(resize_out.get_shape()))
+    for use_gpu in [False, True]:
+      with self.test_session(use_gpu=use_gpu) as sess:
+        input_tensor = tf.constant(x, shape=in_shape)
+        resize_out = tf.image.resize_nearest_neighbor(input_tensor,
+                                                      out_shape[1:3])
+        self.assertEqual(out_shape, list(resize_out.get_shape()))
 
-      resize_out = sess.run(resize_out)
-      self.assertEqual(out_shape, list(resize_out.shape))
+        resize_out = sess.run(resize_out)
+        self.assertEqual(out_shape, list(resize_out.shape))
 
   def testGradFromResizeToLargerInBothDims(self):
     in_shape = [1, 2, 3, 1]
@@ -51,16 +52,17 @@ class ResizeNearestNeighborOpTest(tf.test.TestCase):
 
     x = np.arange(0, 6).reshape(in_shape).astype(np.float32)
 
-    with self.test_session():
-      input_tensor = tf.constant(x, shape=in_shape)
-      resize_out = tf.image.resize_nearest_neighbor(input_tensor,
-                                                    out_shape[1:3])
-      err = tf.test.compute_gradient_error(input_tensor,
-                                           in_shape,
-                                           resize_out,
-                                           out_shape,
-                                           x_init_value=x)
-    self.assertLess(err, 1e-3)
+    for use_gpu in [False, True]:
+      with self.test_session(use_gpu=use_gpu):
+        input_tensor = tf.constant(x, shape=in_shape)
+        resize_out = tf.image.resize_nearest_neighbor(input_tensor,
+                                                      out_shape[1:3])
+        err = tf.test.compute_gradient_error(input_tensor,
+                                             in_shape,
+                                             resize_out,
+                                             out_shape,
+                                             x_init_value=x)
+      self.assertLess(err, 1e-3)
 
   def testGradFromResizeToSmallerInBothDims(self):
     in_shape = [1, 4, 6, 1]
@@ -68,16 +70,17 @@ class ResizeNearestNeighborOpTest(tf.test.TestCase):
 
     x = np.arange(0, 24).reshape(in_shape).astype(np.float32)
 
-    with self.test_session():
-      input_tensor = tf.constant(x, shape=in_shape)
-      resize_out = tf.image.resize_nearest_neighbor(input_tensor,
-                                                    out_shape[1:3])
-      err = tf.test.compute_gradient_error(input_tensor,
-                                           in_shape,
-                                           resize_out,
-                                           out_shape,
-                                           x_init_value=x)
-    self.assertLess(err, 1e-3)
+    for use_gpu in [False, True]:
+      with self.test_session(use_gpu=use_gpu):
+        input_tensor = tf.constant(x, shape=in_shape)
+        resize_out = tf.image.resize_nearest_neighbor(input_tensor,
+                                                      out_shape[1:3])
+        err = tf.test.compute_gradient_error(input_tensor,
+                                             in_shape,
+                                             resize_out,
+                                             out_shape,
+                                             x_init_value=x)
+      self.assertLess(err, 1e-3)
 
 
 class ResizeBilinearOpTest(tf.test.TestCase):
