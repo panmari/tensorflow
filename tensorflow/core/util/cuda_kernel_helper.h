@@ -69,6 +69,11 @@ __device__ __host__ inline T ldg(const T* address) {
 #endif
 }
 
+template <typename dtype>
+__global__ void SetZero(const int nthreads, dtype* bottom_diff) {
+  CUDA_1D_KERNEL_LOOP(index, nthreads) { *(bottom_diff + index) = dtype(0); }
+}
+
 }  // namespace tensorflow
 
 #endif  // GOOGLE_CUDA
