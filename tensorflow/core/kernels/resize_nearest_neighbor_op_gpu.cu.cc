@@ -57,8 +57,8 @@ __global__ void ResizeNearestNeighborBackwardNHWC(
                                    const int in_height, const int in_width,
                                    const int channels, const int out_height,
                                    const int out_width, dtype* bottom_diff) {
-  const float width_scale = out_width / static_cast<float>(in_width);
   const float height_scale = out_height / static_cast<float>(in_height);
+  const float width_scale = out_width / static_cast<float>(in_width);
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     int n = index;
     int c = n % channels;
@@ -68,11 +68,11 @@ __global__ void ResizeNearestNeighborBackwardNHWC(
     int in_y = n % in_height;
     n /= in_height;
 
-    const dtype* top_diff_n = top_diff + n * channels * out_height * out_width;
+    dtype* bottom_diff_n = bottom_diff + n * channels * out_height * out_width;
     const int out_x = min(static_cast<int>(floorf(in_x * width_scale)), out_width - 1);
     const int out_y = min(static_cast<int>(floorf(in_y * height_scale)), out_height - 1);
     int idx = c * out_height * out_width + out_y * out_width + out_x;
-    bottom_diff[index] += top_diff_n[idx];
+    bottom_diff_n[idx] += top_diff[index];
   }
 }
 
@@ -97,13 +97,18 @@ bool ResizeNearestNeighborBackward(const float* top_diff, const int batch,
                                    const int channels, const int out_height,
                                    const int out_width, float* bottom_diff,
                                    const Eigen::GpuDevice& d) {
+  const int output_size = batch * channels * out_height * out_width;
+  CudaLaunchConfig output_config = GetCudaLaunchConfig(output_size, d);
+  SetZero<<<output_config.block_count,
+            output_config.thread_per_block, 0, d.stream()>>>(output_size, bottom_diff);
+
   const int input_size = batch * channels * in_height * in_width;
-  CudaLaunchConfig config = GetCudaLaunchConfig(input_size, d);
+  CudaLaunchConfig input_config = GetCudaLaunchConfig(input_size, d);
 
-  SetZero<<<config.block_count, config.thread_per_block, 0, d.stream()>>>(input_size, bottom_diff);
-
-  ResizeNearestNeighborBackwardNHWC<<<config.block_count, config.thread_per_block, 0, d.stream()>>>(
-      config.virtual_thread_count, top_diff, in_height, in_width, channels, out_height,
+  ResizeNearestNeighborBackwardNHWC<<<input_config.block_count,
+                                      input_config.thread_per_block, 0, d.stream()>>>(
+      input_config.virtual_thread_count, top_diff,
+      in_height, in_width, channels, out_height,
       out_width, bottom_diff);
   return d.ok();
 }
