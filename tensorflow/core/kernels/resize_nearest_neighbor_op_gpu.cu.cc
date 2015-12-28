@@ -72,7 +72,7 @@ __global__ void ResizeNearestNeighborBackwardNHWC(
     const int out_x = min(static_cast<int>(floorf(in_x * width_scale)), out_width - 1);
     const int out_y = min(static_cast<int>(floorf(in_y * height_scale)), out_height - 1);
     int idx = c * out_height * out_width + out_y * out_width + out_x;
-    bottom_diff_n[idx] += top_diff[index];
+    atomicAdd(bottom_diff_n + idx, top_diff[index]);
   }
 }
 
