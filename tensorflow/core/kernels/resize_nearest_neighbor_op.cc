@@ -288,7 +288,7 @@ class ResizeNearestNeighborGPUOpGrad : public OpKernel {
 
     if (!status) {
       context->SetStatus(
-          errors::Internal("Failed launching ResizeNearestNeighbor"));
+          errors::Internal("Failed launching ResizeNearestNeighborGrad"));
     }
   }
 };

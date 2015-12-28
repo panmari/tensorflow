@@ -44,7 +44,7 @@ class ResizeNearestNeighborOpTest(tf.test.TestCase):
         self.assertEqual(out_shape, list(resize_out.get_shape()))
 
         resize_out = sess.run(resize_out)
-        self.assertEqual(out_shape, list(resize_out.shape))
+      self.assertEqual(out_shape, list(resize_out.shape))
 
   def testGradFromResizeToLargerInBothDims(self):
     in_shape = [1, 2, 3, 1]
