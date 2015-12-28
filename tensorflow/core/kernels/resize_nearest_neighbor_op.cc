@@ -239,11 +239,70 @@ class ResizeNearestNeighborGPUOp : public OpKernel {
   }
 };
 
+template <typename T>
+class ResizeNearestNeighborGPUOpGrad : public OpKernel {
+ public:
+  explicit ResizeNearestNeighborGPUOpGrad(OpKernelConstruction* context)
+      : OpKernel(context) {}
+
+  void Compute(OpKernelContext* context) override {
+    // Grab and validate the input:
+    const Tensor& input = context->input(0);
+    OP_REQUIRES(context, input.dims() == 4,
+                errors::InvalidArgument("input must be 4-dimensional",
+                                        input.shape().ShortDebugString()));
+
+    // Grab and validate the output shape:
+    const Tensor& shape_t = context->input(1);
+    OP_REQUIRES(context, shape_t.dims() == 1,
+                errors::InvalidArgument("shape_t must be 1-dimensional",
+                                        shape_t.shape().ShortDebugString()));
+    OP_REQUIRES(context, shape_t.NumElements() == 2,
+                errors::InvalidArgument("shape_t must have two elements",
+                                        shape_t.shape().ShortDebugString()));
+
+    auto sizes = shape_t.vec<int32>();
+    OP_REQUIRES(context, sizes(0) > 0 && sizes(1) > 0,
+                errors::InvalidArgument("shape_t's elements must be positive"));
+
+    // Initialize shape to the batch size of the input, then add
+    // the rest of the dimensions
+    Tensor* output = nullptr;
+    OP_REQUIRES_OK(context, context->allocate_output(
+                                0, TensorShape({input.dim_size(0), sizes(0),
+                                                sizes(1), input.dim_size(3)}),
+                                &output));
+
+    const int64 batch_size = input.dim_size(0);
+    const int64 in_height = input.dim_size(1);
+    const int64 in_width = input.dim_size(2);
+    const int64 channels = input.dim_size(3);
+
+    const int64 out_height = output->dim_size(1);
+    const int64 out_width = output->dim_size(2);
+
+    bool status = ResizeNearestNeighborBackward(
+        input.flat<T>().data(), batch_size, in_height,
+        in_width, channels, out_height, out_width, output->flat<T>().data(),
+        context->eigen_gpu_device());
+
+    if (!status) {
+      context->SetStatus(
+          errors::Internal("Failed launching ResizeNearestNeighbor"));
+    }
+  }
+};
+
 REGISTER_KERNEL_BUILDER(Name("ResizeNearestNeighbor")
                         .Device(DEVICE_GPU)
                         .TypeConstraint<float>("T")
                         .HostMemory("size"),
                         ResizeNearestNeighborGPUOp<float>);
+REGISTER_KERNEL_BUILDER(Name("ResizeNearestNeighborGrad")       \
+                          .Device(DEVICE_GPU)                 \
+                          .TypeConstraint<float>("T")             \
+                          .HostMemory("size"),                \
+                      ResizeNearestNeighborGPUOpGrad<float>);
 
 template <typename Device, typename T>
 class ResizeNearestNeighborGPUOpGrad : public OpKernel {
