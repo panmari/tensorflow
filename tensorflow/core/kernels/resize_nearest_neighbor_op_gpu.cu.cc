@@ -29,8 +29,8 @@ namespace {
 
 template <typename dtype>
 __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* bottom_data,
-                                          const int channels, const int in_height,
-                                          const int in_width, const int out_height,
+                                          const int in_height, const int in_width,
+                                          const int channels, const int out_height,
                                           const int out_width, dtype* top_data) {
   const float width_scale = in_width / static_cast<float>(out_width);
   const float height_scale = in_height / static_cast<float>(out_height);
@@ -54,8 +54,8 @@ __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* botto
 template <typename dtype>
 __global__ void ResizeNearestNeighborBackwardNHWC(
                                    const int nthreads, const dtype* top_diff,
-                                   const int channels, const int in_height,
-                                   const int in_width, const int out_height,
+                                   const int in_height, const int in_width,
+                                   const int channels, const int out_height,
                                    const int out_width, dtype* bottom_diff) {
   const float width_scale = out_width / static_cast<float>(in_width);
   const float height_scale = out_height / static_cast<float>(in_height);
