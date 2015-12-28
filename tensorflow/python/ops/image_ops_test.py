@@ -576,7 +576,8 @@ class ResizeImagesTest(test_util.TensorFlowTestCase):
   def testNoOp(self):
     img_shape = [1, 6, 4, 1]
     single_shape = [6, 4, 1]
-    # This test is also conducted with int8, so 127 is the maximum value that can be used.
+    # This test is also conducted with int8, so 127 is the maximum
+    # value that can be used.
     data = [127, 127, 64, 64,
             127, 127, 64, 64,
             64, 64, 127, 127,
@@ -587,8 +588,8 @@ class ResizeImagesTest(test_util.TensorFlowTestCase):
     target_height = 6
     target_width = 4
 
-    for type in self.TYPES:
-      img_np = np.array(data, dtype=type).reshape(img_shape)
+    for nptype in self.TYPES:
+      img_np = np.array(data, dtype=nptype).reshape(img_shape)
 
       for opt in self.OPTIONS:
         for use_gpu in self.availablGPUModes(opt):
@@ -611,7 +612,8 @@ class ResizeImagesTest(test_util.TensorFlowTestCase):
         self.assertAllEqual(single_shape, newshape)
 
   def testResizeDown(self):
-    # This test is also conducted with int8, so 127 is the maximum value that can be used.
+    # This test is also conducted with int8, so 127 is the maximum
+    # value that can be used.
     data = [127, 127, 64, 64,
             127, 127, 64, 64,
             64, 64, 127, 127,
@@ -631,8 +633,8 @@ class ResizeImagesTest(test_util.TensorFlowTestCase):
 
     for target_shape, img_shape in zip(target_shapes, img_shapes):
 
-      for type in self.TYPES:
-        img_np = np.array(data, dtype=type).reshape(img_shape)
+      for nptype in self.TYPES:
+        img_np = np.array(data, dtype=nptype).reshape(img_shape)
 
         for opt in self.OPTIONS:
           for use_gpu in self.availablGPUModes(opt):
@@ -673,14 +675,14 @@ class ResizeImagesTest(test_util.TensorFlowTestCase):
         50.0, 50.0, 100.0, 100.0,
         50.0, 50.0, 100.0, 100.0]
 
-    for type in self.TYPES:
+    for nptype in self.TYPES:
       for opt in [
           image_ops.ResizeMethod.BILINEAR,
           image_ops.ResizeMethod.NEAREST_NEIGHBOR,
           image_ops.ResizeMethod.AREA]:
         for use_gpu in self.availablGPUModes(opt):
           with self.test_session(use_gpu=use_gpu):
-            img_np = np.array(data, dtype=type).reshape(img_shape)
+            img_np = np.array(data, dtype=nptype).reshape(img_shape)
             image = constant_op.constant(img_np, shape=img_shape)
             y = image_ops.resize_images(image, target_height, target_width, opt)
             resized = y.eval()
@@ -742,6 +744,7 @@ class ResizeImagesTest(test_util.TensorFlowTestCase):
           [1, target_height, target_width, 1])
       resized = y.eval()
       self.assertAllClose(resized, expected, atol=1)
+
 
 class ResizeImageWithCropOrPadTest(test_util.TensorFlowTestCase):
 
