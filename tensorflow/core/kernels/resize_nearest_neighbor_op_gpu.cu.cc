@@ -46,7 +46,7 @@ __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* botto
     const dtype* bottom_data_n = bottom_data + n * channels * in_height * in_width;
     const int in_x = min(static_cast<int>(floorf(out_x * width_scale)), in_width - 1);
     const int in_y = min(static_cast<int>(floorf(out_y * height_scale)), in_height - 1);
-    int idx = c * in_height * in_width + in_y * in_width + in_x;
+    const int idx = (in_y * in_height + in_x) * channels + c;
     top_data[index] = bottom_data_n[idx];
   }
 }

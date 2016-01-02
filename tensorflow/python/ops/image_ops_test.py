@@ -750,7 +750,8 @@ class ResizeImagesTest(test_util.TensorFlowTestCase):
   def testCompareNearestNeighbor(self):
     input_shape = [1, 5, 5, 3]
     target_height = target_width = 10
-    img_np = np.random.rand(*input_shape).astype(np.float32)
+    #img_np = np.random.rand(*input_shape).astype(np.float32)
+    img_np = np.arange(0, 5*5*3, dtype=np.float32).reshape(input_shape)
     with self.test_session(use_gpu=True):
       image = constant_op.constant(img_np, shape=input_shape)
       out_op = image_ops.resize_images(image, target_height, target_width,
