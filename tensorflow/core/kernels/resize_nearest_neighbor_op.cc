@@ -304,7 +304,7 @@ REGISTER_KERNEL_BUILDER(Name("ResizeNearestNeighborGrad")       \
                           .HostMemory("size"),                \
                       ResizeNearestNeighborGPUOpGrad<float>);
 
-template <typename Device, typename T>
+template <typename T>
 class ResizeNearestNeighborGPUOpGrad : public OpKernel {
  public:
   explicit ResizeNearestNeighborOpGrad(OpKernelConstruction* context)
