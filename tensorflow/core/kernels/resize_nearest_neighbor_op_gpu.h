@@ -17,8 +17,8 @@ limitations under the License.
 #error This file must only be included when building with Cuda support
 #endif
 
-#ifndef THIRD_PARTY_TENSORFLOW_CORE_KERNELS_MAXPOOLING_OP_GPU_H_
-#define THIRD_PARTY_TENSORFLOW_CORE_KERNELS_MAXPOOLING_OP_GPU_H_
+#ifndef THIRD_PARTY_TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
+#define THIRD_PARTY_TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
 
 #define EIGEN_USE_GPU
 
@@ -38,4 +38,4 @@ bool ResizeNearestNeighborBackward(const float* top_diff, const int batch, const
 
 }  // namespace tensorflow
 
-#endif  // THIRD_PARTY_TENSORFLOW_CORE_KERNELS_MAXPOOLING_OP_GPU_H_
+#endif  // THIRD_PARTY_TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
