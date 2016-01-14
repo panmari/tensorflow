@@ -51,6 +51,31 @@ __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* botto
   }
 }
 
+template <typename dtype>
+__global__ void ResizeNearestNeighborBackwardNHWC(
+                                   const int nthreads, const dtype* top_diff,
+                                   const int in_height, const int in_width,
+                                   const int channels, const int out_height,
+                                   const int out_width, dtype* bottom_diff) {
+  const float height_scale = out_height / static_cast<float>(in_height);
+  const float width_scale = out_width / static_cast<float>(in_width);
+  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+    int n = index;
+    int c = n % channels;
+    n /= channels;
+    int in_x = n % in_width;
+    n /= in_width;
+    int in_y = n % in_height;
+    n /= in_height;
+
+    dtype* bottom_diff_n = bottom_diff + n * channels * out_height * out_width;
+    const int out_x = min(static_cast<int>(floorf(in_x * width_scale)), out_width - 1);
+    const int out_y = min(static_cast<int>(floorf(in_y * height_scale)), out_height - 1);
+    const int idx = (out_y * out_height + out_x) * channels + c;
+    atomicAdd(bottom_diff_n + idx, top_diff[index]);
+  }
+}
+
 }  // namespace
 
 bool ResizeNearestNeighbor(const float* bottom_data, const int batch,
@@ -67,6 +92,26 @@ bool ResizeNearestNeighbor(const float* bottom_data, const int batch,
   return d.ok();
 }
 
+bool ResizeNearestNeighborBackward(const float* top_diff, const int batch,
+                                   const int in_height, const int in_width,
+                                   const int channels, const int out_height,
+                                   const int out_width, float* bottom_diff,
+                                   const Eigen::GpuDevice& d) {
+  const int output_size = batch * channels * out_height * out_width;
+  CudaLaunchConfig output_config = GetCudaLaunchConfig(output_size, d);
+  SetZero<<<output_config.block_count,
+            output_config.thread_per_block, 0, d.stream()>>>(output_size, bottom_diff);
+
+  const int input_size = batch * channels * in_height * in_width;
+  CudaLaunchConfig input_config = GetCudaLaunchConfig(input_size, d);
+
+  ResizeNearestNeighborBackwardNHWC<<<input_config.block_count,
+                                      input_config.thread_per_block, 0, d.stream()>>>(
+      input_config.virtual_thread_count, top_diff,
+      in_height, in_width, channels, out_height,
+      out_width, bottom_diff);
+  return d.ok();
+}
 }  // end namespace tensorflow
 
 #endif  // GOOGLE_CUDA
