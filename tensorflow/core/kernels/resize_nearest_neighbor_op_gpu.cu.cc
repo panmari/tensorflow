@@ -30,10 +30,9 @@ namespace {
 template <typename dtype>
 __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* bottom_data,
                                           const int in_height, const int in_width,
-                                          const int channels, const int out_height,
+                                          const int channels, const float height_scale,
+                                          const float width_scale, const int out_height,
                                           const int out_width, dtype* top_data) {
-  const float width_scale = in_width / static_cast<float>(out_width);
-  const float height_scale = in_height / static_cast<float>(out_height);
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     int n = index;
     int c = n % channels;
@@ -56,14 +55,15 @@ __global__ void ResizeNearestNeighborNHWC(const int nthreads, const dtype* botto
 bool ResizeNearestNeighbor(const float* bottom_data, const int batch,
                            const int in_height, const int in_width,
                            const int channels, const int out_height,
-                           const int out_width, float* top_data,
+                           const int out_width,  const float height_scale,
+                           const float width_scale, float* top_data,
                            const Eigen::GpuDevice& d) {
   const int output_size = batch * channels * out_height * out_width;
   CudaLaunchConfig config = GetCudaLaunchConfig(output_size, d);
 
   ResizeNearestNeighborNHWC<<<config.block_count, config.thread_per_block, 0, d.stream()>>>(
       output_size, bottom_data, in_height, in_width, channels, out_height,
-      out_width, top_data);
+      out_width, height_scale, width_scale, top_data);
   return d.ok();
 }
 

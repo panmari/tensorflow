@@ -214,20 +214,22 @@ template <typename T>
 class ResizeNearestNeighborGPUOp : public OpKernel {
  public:
   explicit ResizeNearestNeighborGPUOp(OpKernelConstruction* context)
-      : OpKernel(context) {}
+      : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("align_corners", &align_corners_));
+  }
 
   void Compute(OpKernelContext* context) override {
     const Tensor& input = context->input(0);
     OP_REQUIRES(context, input.dims() == 4,
                 errors::InvalidArgument("input must be 4-dimensional",
-                                        input.shape().ShortDebugString()));
+                                        input.shape().DebugString()));
     const Tensor& shape_t = context->input(1);
     OP_REQUIRES(context, shape_t.dims() == 1,
                 errors::InvalidArgument("shape_t must be 1-dimensional",
-                                        shape_t.shape().ShortDebugString()));
+                                        shape_t.shape().DebugString()));
     OP_REQUIRES(context, shape_t.NumElements() == 2,
                 errors::InvalidArgument("shape_t must have two elements",
-                                        shape_t.shape().ShortDebugString()));
+                                        shape_t.shape().DebugString()));
 
     auto sizes = shape_t.vec<int32>();
     OP_REQUIRES(context, sizes(0) > 0 && sizes(1) > 0,
@@ -248,9 +250,19 @@ class ResizeNearestNeighborGPUOp : public OpKernel {
     const int64 out_height = output->dim_size(1);
     const int64 out_width = output->dim_size(2);
 
+    const float height_scale =
+        (align_corners_ && out_height > 1)
+            ? (in_height - 1) / static_cast<float>(out_height - 1)
+            : in_height / static_cast<float>(out_height);
+    const float width_scale =
+        (align_corners_ && out_width > 1)
+            ? (in_width - 1) / static_cast<float>(out_width - 1)
+            : in_width / static_cast<float>(out_width);
+
     bool status = ResizeNearestNeighbor(
         input.flat<T>().data(), batch_size, in_height,
-        in_width, channels, out_height, out_width, output->flat<T>().data(),
+        in_width, channels, out_height, out_width,
+        height_scale, width_scale, output->flat<T>().data(),
         context->eigen_gpu_device());
 
     if (!status) {
@@ -259,6 +271,8 @@ class ResizeNearestNeighborGPUOp : public OpKernel {
 
     }
   }
+ private:
+  bool align_corners_;
 };
 
 REGISTER_KERNEL_BUILDER(Name("ResizeNearestNeighbor")

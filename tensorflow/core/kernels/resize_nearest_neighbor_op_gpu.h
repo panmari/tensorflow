@@ -17,21 +17,21 @@ limitations under the License.
 #error This file must only be included when building with Cuda support
 #endif
 
-#ifndef THIRD_PARTY_TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
-#define THIRD_PARTY_TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
+#ifndef TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
+#define TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
 
 #define EIGEN_USE_GPU
 
 #include "third_party/eigen3/unsupported/Eigen/CXX11/NeuralNetworks"
 #include "tensorflow/core/framework/tensor_types.h"
-#include "tensorflow/core/platform/port.h"
 
 namespace tensorflow {
 
 bool ResizeNearestNeighbor(const float* bottom_data, const int batch, const int in_height,
                            const int in_width, const int channels, const int out_height,
-                           const int out_width, float* top_data, const Eigen::GpuDevice& d);
+                           const int out_width, const float height_scale, const float width_scale,
+                           float* top_data, const Eigen::GpuDevice& d);
 
 }  // namespace tensorflow
 
-#endif  // THIRD_PARTY_TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
+#endif  // TENSORFLOW_CORE_KERNELS_RESIZE_NEAREST_NEIGHBOR_OP_GPU_H_
