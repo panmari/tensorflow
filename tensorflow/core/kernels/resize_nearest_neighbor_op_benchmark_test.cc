@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace tensorflow {
 
-static Graph* BM_ResizeNearestNeighbor(int batches, int width, int height) {
+static Graph* BM_Resize_NearestNeighbor(int batches, int width, int height) {
   Graph* g = new Graph(OpRegistry::Global());
   Tensor in(DT_FLOAT, TensorShape({batches, width, height, 3}));
   in.flat<float>().setRandom();
@@ -39,14 +39,36 @@ static Graph* BM_ResizeNearestNeighbor(int batches, int width, int height) {
   return g;
 }
 
-#define BM_ResizeNearestNeighborDev(DEVICE, B, W, H)                           \
-  static void BM_ResizeNearestNeighbor_##DEVICE##_##B##_##W##_##H(int iters) { \
-    testing::ItemsProcessed(iters* B* W* H * 3);                               \
-    test::Benchmark(#DEVICE, BM_ResizeNearestNeighbor(B, W, H)).Run(iters);    \
-  }                                                                            \
-  BENCHMARK(BM_ResizeNearestNeighbor_##DEVICE##_##B##_##W##_##H)
+static Graph* BM_Resize_Bilinear(int batches, int width, int height) {
+  Graph* g = new Graph(OpRegistry::Global());
+  Tensor in(DT_FLOAT, TensorShape({batches, width, height, 3}));
+  in.flat<float>().setRandom();
 
-BM_ResizeNearestNeighborDev(cpu, 1, 499, 499);
-BM_ResizeNearestNeighborDev(gpu, 1, 499, 499);
+  Tensor out_size(DT_INT32, TensorShape({2}));
+  auto out_size_flat = out_size.flat<int32>();
+  out_size_flat(0) = width * 2;
+  out_size_flat(1) = height * 2;
 
-}  // namespace tensorflow
+  Node* ret;
+  NodeBuilder(g->NewName("n"), "ResizeBilinear")
+      .Input(test::graph::Constant(g, in))
+      .Input(test::graph::Constant(g, out_size))
+      .Finalize(g, &ret);
+  return g;
+}
+
+#define BM_ResizeDev(DEVICE, ALGORITHM, B, W, H)                                \
+  static void BM_Resize_##ALGORITHM##_##DEVICE##_##B##_##W##_##H(int iters) {   \
+    testing::ItemsProcessed(iters* B* W* H * 3);                                \
+    test::Benchmark(#DEVICE, BM_Resize_##ALGORITHM(B, W, H)).Run(iters);        \
+  }                                                                             \
+  BENCHMARK(BM_Resize_##ALGORITHM##_##DEVICE##_##B##_##W##_##H)
+
+BM_ResizeDev(cpu, NearestNeighbor, 10, 499, 499);
+BM_ResizeDev(gpu, NearestNeighbor, 10, 499, 499);
+
+BM_ResizeDev(cpu, Bilinear, 10, 499, 499);
+BM_ResizeDev(gpu, Bilinear, 10, 499, 499);
+
+}  // tensorflow
+
